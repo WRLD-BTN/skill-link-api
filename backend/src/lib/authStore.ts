@@ -542,7 +542,7 @@ export async function changeAdminPassword(input: {
     return { ok: false as const, message: 'Admin account not found.' }
   }
 
-  if (hashPassword(input.originalAdminPassword) !== hashPassword(bootstrapAdminPassword)) {
+  if (hashPassword(input.originalAdminPassword) !== admin.passwordHash) {
     return { ok: false as const, message: 'Enter the original SkillLink admin password to continue.' }
   }
 

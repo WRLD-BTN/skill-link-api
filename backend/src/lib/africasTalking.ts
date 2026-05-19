@@ -16,18 +16,22 @@ export async function sendVerificationSms(phone: string, code: string): Promise<
     return { simulated: true }
   }
 
-  const AfricasTalking = require('africastalking')({
-    username,
-    apiKey,
-  })
+  try {
+    const AfricasTalking = require('africastalking')({
+      username,
+      apiKey,
+    })
 
-  const sms = AfricasTalking.SMS
+    const sms = AfricasTalking.SMS
 
-  await sms.send({
-    to: [phone],
-    message: `${messagePrefix} ${code}`,
-    senderId: senderId || undefined,
-  })
+    await sms.send({
+      to: [phone],
+      message: `${messagePrefix} ${code}`,
+      senderId: senderId || undefined,
+    })
 
-  return { simulated: false }
+    return { simulated: false }
+  } catch (error) {
+    throw new Error(`SMS sending failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 }
