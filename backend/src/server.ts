@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import express from 'express'
 import { jobs, skills, tradespeople } from './data/mock.js'
 import {
+  authenticateAdmin,
   authenticateUser,
   changeAdminPassword,
   createOrUpdateClient,
@@ -78,7 +79,7 @@ app.post('/api/auth/access', async (request, response) => {
   const name = String(request.body?.name ?? '')
   const suburb = String(request.body?.suburb ?? '')
 
-  if (!email) {
+  if (role !== 'admin' && !email) {
     response.status(400).json({ ok: false, message: 'Email is required.' })
     return
   }
@@ -127,7 +128,7 @@ app.post('/api/auth/access', async (request, response) => {
     }
   }
   if (role === 'admin') {
-    const result = await authenticateUser({ email, phone, role: 'admin', password })
+    const result = await authenticateAdmin({ password })
     if (!result.ok) {
       response.status(403).json(result)
       return
@@ -301,4 +302,3 @@ app.post('/api/auth/verify-otp', (request, response) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`SkillLink API listening on port ${port}`)
 })
-

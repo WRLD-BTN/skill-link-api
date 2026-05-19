@@ -40,6 +40,7 @@ interface StoreData {
 }
 
 const bootstrapAdminPassword = process.env.VITE_ADMIN_PASSWORD ?? 'skill-l!nk@2026'
+const sampleUserPassword = 'skilllink-demo'
 const runtimeDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.runtime')
 const storePath = path.join(runtimeDir, 'auth-store.json')
 
@@ -57,8 +58,8 @@ function normalizeEmail(email: string) {
 
 function seedStore(): StoreData {
   return {
-    users: [createBootstrapAdmin()],
-    joinRequests: [],
+    users: [createBootstrapAdmin(), ...createSampleUsers()],
+    joinRequests: createSampleJoinRequests(),
   }
 }
 
@@ -76,6 +77,136 @@ function createBootstrapAdmin(): StoredUser {
   }
 }
 
+const firstNames = [
+  'Tawanda',
+  'Rumbidzai',
+  'Prince',
+  'Ashley',
+  'Farai',
+  'Tanaka',
+  'Munashe',
+  'Kundai',
+  'Tapiwa',
+  'Rutendo',
+  'Nyasha',
+  'Tinashe',
+  'Shamiso',
+  'Anesu',
+  'Mandla',
+  'Sipho',
+  'Nomsa',
+  'Buhle',
+  'Tatenda',
+  'Panashe',
+  'Brian',
+  'Shingi',
+  'Melody',
+  'Tendai',
+  'Blessing',
+  'Valerie',
+  'Mike',
+  'Tonderai',
+  'Mavis',
+  'Pardon',
+]
+
+const lastNames = [
+  'Moyo',
+  'Ncube',
+  'Dube',
+  'Sibanda',
+  'Zhou',
+  'Chari',
+  'Mpofu',
+  'Mhlanga',
+  'Maregere',
+  'Chinembiri',
+  'Maphosa',
+  'Mlotshwa',
+  'Mangena',
+  'Nyoni',
+  'Muzenda',
+  'Mupfumi',
+  'Jena',
+  'Tshuma',
+  'Khumalo',
+  'Madzimure',
+]
+
+const sampleAreas = [
+  'Mbare',
+  'Highfield',
+  'Borrowdale',
+  'Avondale',
+  'Epworth',
+  'CBD',
+  'Nkulumane',
+  'Luveve',
+  'Sakubva',
+  'Dangamvura',
+  'Chitungwiza',
+  'Ruwa',
+  'Marondera',
+  'Norton',
+  'Chinhoyi',
+  'Gweru',
+  'Kwekwe',
+  'Masvingo',
+]
+
+const sampleSkills = ['Plumber', 'Electrician', 'Carpenter', 'Welder', 'Painter', 'Tiler', 'Roofer', 'Mechanic']
+
+function makeSampleName(index: number) {
+  return `${firstNames[index % firstNames.length]} ${lastNames[(index * 3) % lastNames.length]}`
+}
+
+function makeSamplePhone(index: number) {
+  return `+26377${String(2000000 + index).padStart(7, '0')}`
+}
+
+function makeSampleEmail(name: string, role: 'client' | 'tradesperson' | 'join') {
+  return `${name.toLowerCase().replace(/\s+/g, '.')}.${role}@skilllink.test`
+}
+
+function createSampleUsers() {
+  return Array.from({ length: 90 }, (_, index): StoredUser => {
+    const role = index % 5 < 2 ? 'client' : 'tradesperson'
+    const fullName = makeSampleName(index + 1)
+
+    return {
+      id: `sample-${role}-${index + 1}`,
+      fullName,
+      email: makeSampleEmail(fullName, role),
+      phone: makeSamplePhone(index + 1),
+      suburb: sampleAreas[index % sampleAreas.length],
+      role,
+      status: index % 17 === 0 ? 'Suspended' : index % 13 === 0 ? 'Flagged' : 'Active',
+      registeredAt: `2026-${String(2 + (index % 3)).padStart(2, '0')}-${String((index % 28) + 1).padStart(2, '0')}`,
+      passwordHash: hashPassword(sampleUserPassword),
+    }
+  })
+}
+
+function createSampleJoinRequests() {
+  return Array.from({ length: 18 }, (_, index): StoredJoinRequest => {
+    const fullName = makeSampleName(index + 140)
+
+    return {
+      id: `sample-request-${index + 1}`,
+      fullName,
+      email: makeSampleEmail(fullName, 'join'),
+      phone: makeSamplePhone(500 + index),
+      suburb: sampleAreas[(index + 4) % sampleAreas.length],
+      city: index % 3 === 0 ? 'Bulawayo' : 'Harare',
+      primarySkill: sampleSkills[index % sampleSkills.length],
+      yearsExperience: 1 + (index % 12),
+      status: index % 6 === 0 ? 'Rejected' : index % 4 === 0 ? 'Approved' : 'Pending',
+      submittedAt: `2026-04-${String((index % 28) + 1).padStart(2, '0')}T${String(8 + (index % 8)).padStart(2, '0')}:30:00.000Z`,
+      passwordHash: hashPassword(sampleUserPassword),
+    }
+  })
+}
+
 async function ensureStore() {
   await mkdir(runtimeDir, { recursive: true })
 
@@ -89,6 +220,24 @@ async function ensureStore() {
 
     if (!store.users.some((user) => user.role === 'admin')) {
       store.users = [createBootstrapAdmin(), ...store.users]
+    }
+
+    const existingUserIds = new Set(store.users.map((user) => user.id))
+    const missingSampleUsers =
+      store.users.length < 81 ? createSampleUsers().filter((user) => !existingUserIds.has(user.id)) : []
+
+    if (missingSampleUsers.length > 0) {
+      store.users = [...store.users, ...missingSampleUsers]
+    }
+
+    const existingRequestIds = new Set(store.joinRequests.map((request) => request.id))
+    const missingSampleRequests = createSampleJoinRequests().filter((request) => !existingRequestIds.has(request.id))
+
+    if (missingSampleRequests.length > 0) {
+      store.joinRequests = [...store.joinRequests, ...missingSampleRequests]
+    }
+
+    if (missingSampleUsers.length > 0 || missingSampleRequests.length > 0) {
       await saveStore(store)
     }
 
@@ -200,6 +349,28 @@ export async function authenticateUser(input: {
       email: user.email,
       role: user.role,
       suburb: user.suburb,
+    },
+  }
+}
+
+export async function authenticateAdmin(input: { password: string }) {
+  const store = await ensureStore()
+  const admin = store.users.find(
+    (entry) => entry.role === 'admin' && entry.status === 'Active' && entry.passwordHash === hashPassword(input.password),
+  )
+
+  if (!admin) {
+    return { ok: false as const, message: 'Admin password is incorrect.' }
+  }
+
+  return {
+    ok: true as const,
+    user: {
+      name: admin.fullName,
+      phone: admin.phone,
+      email: admin.email,
+      role: admin.role,
+      suburb: admin.suburb,
     },
   }
 }
