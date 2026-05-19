@@ -57,20 +57,22 @@ function normalizeEmail(email: string) {
 
 function seedStore(): StoreData {
   return {
-    users: [
-      {
-        id: 'admin-1',
-        fullName: 'Admin User',
-        email: 'admin@skilllink.test',
-        phone: '+263771111111',
-        suburb: 'Avondale',
-        role: 'admin',
-        status: 'Active',
-        registeredAt: '2026-02-01',
-        passwordHash: hashPassword(bootstrapAdminPassword),
-      },
-    ],
+    users: [createBootstrapAdmin()],
     joinRequests: [],
+  }
+}
+
+function createBootstrapAdmin(): StoredUser {
+  return {
+    id: 'admin-1',
+    fullName: 'Admin User',
+    email: 'admin@skilllink.test',
+    phone: '+263771111111',
+    suburb: 'Avondale',
+    role: 'admin',
+    status: 'Active',
+    registeredAt: '2026-02-01',
+    passwordHash: hashPassword(bootstrapAdminPassword),
   }
 }
 
@@ -80,11 +82,17 @@ async function ensureStore() {
   try {
     const content = await readFile(storePath, 'utf8')
     const parsed = JSON.parse(content) as StoreData
-
-    return {
+    const store = {
       users: parsed.users ?? [],
       joinRequests: parsed.joinRequests ?? [],
     }
+
+    if (!store.users.some((user) => user.role === 'admin')) {
+      store.users = [createBootstrapAdmin(), ...store.users]
+      await saveStore(store)
+    }
+
+    return store
   } catch {
     const seeded = seedStore()
     await writeFile(storePath, JSON.stringify(seeded, null, 2), 'utf8')
@@ -339,6 +347,12 @@ export async function updateUserStatus(id: string, status: UserStatus) {
 
 export async function removeUser(id: string) {
   const store = await ensureStore()
+  const user = store.users.find((entry) => entry.id === id)
+
+  if (!user || user.role === 'admin') {
+    return false
+  }
+
   const before = store.users.length
   store.users = store.users.filter((entry) => entry.id !== id)
   await saveStore(store)

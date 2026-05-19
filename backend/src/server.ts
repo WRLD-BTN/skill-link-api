@@ -126,6 +126,15 @@ app.post('/api/auth/access', async (request, response) => {
       return
     }
   }
+  if (role === 'admin') {
+    const result = await authenticateUser({ email, phone, role: 'admin', password })
+    if (!result.ok) {
+      response.status(403).json(result)
+      return
+    }
+    response.json(result)
+    return
+  }
 
   const result = await authenticateUser({
     email,
