@@ -289,6 +289,7 @@ app.post('/api/auth/verify-otp', (request, response) => {
   response.json(result)
 })
 
-app.listen(port, () => {
-  console.log(`SkillLink API listening on http://localhost:${port}`)
+app.listen(port, '0.0.0.0', () => {
+  console.log(`SkillLink API listening on port ${port}`)
 })
+
